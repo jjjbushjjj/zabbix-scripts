@@ -3,22 +3,33 @@
 #Get json output from status service web page
 import urllib, json, sys
 from socket import gethostname, getfqdn
+import subprocess
 
 # this require presence of xmltodict rpm package !
 sys.path.append('/usr/local/lib/python2.7/dist-packages')
 import xmltodict
 # zbxsend.py must be present in current directory
-from zbxsend import Metric, send_to_zabbix
 
 zabbix_server_url = 'fqdn of zabbix server or proxy'
 zabbix_server_port = 'port'
+
 
 hostname = getfqdn()
 
 def metric_send( item, val, host = hostname, zbx_serv = zabbix_server_url, zbx_serv_port = zabbix_server_port ):
     print "This is sent to zabbix: item - %s value - %s" % (item, val)
-    send_to_zabbix( [ Metric(host, item, val) ],
-                    zbx_serv, zbx_serv_port )
+    subprocess.call(["/usr/sbin/zabbix-sender",
+                     "-z",
+                     zbx_serv,
+                     "-p",
+                     zbx_serv_port,
+                     "-s",
+                     host,
+                     "-k",
+                     item,
+                     "-o",
+                     val
+                   ])
 
 # we pass 2 params to this script
 # 1 name of kannel instance You could set any meaningful name here
@@ -73,7 +84,7 @@ if int(o['gateway']['smscs']['count']) > 1:
 		else:
 #			print "%s.smscs.smsc.%s.received %s " % ( name, i, o['gateway']['smscs']['smsc'][i]['received'] )
 			metric_send( name+'.smscs.smcs.'+provider+'.received', o['gateway']['smscs']['smsc'][i]['received'] )
-		
+
 #		print "%s.smscs.smsc.%s.name %s " % ( name, i, o['gateway']['smscs']['smsc'][i]['name'] )
 		metric_send( name+'.smscs.smcs.'+provider+'.name', o['gateway']['smscs']['smsc'][i]['name'] )
 
@@ -86,7 +97,7 @@ if int(o['gateway']['smscs']['count']) > 1:
 #		print "%s.smscs.smsc.%s.id %s " % ( name, i, o['gateway']['smscs']['smsc'][i]['id'] )
 #		metric_send( name+'.smscs.smcs.'+provider+'.id', o['gateway']['smscs']['smsc'][i]['id'] )
 
-		if isinstance(o['gateway']['smscs']['smsc'][i]['sent'], dict ):	
+		if isinstance(o['gateway']['smscs']['smsc'][i]['sent'], dict ):
 #			print "%s.smscs.smsc.%s.sent %s " % ( name, i, o['gateway']['smscs']['smsc'][i]['sent']['sms'] )
 			metric_send( name+'.smscs.smcs.'+provider+'.sent', o['gateway']['smscs']['smsc'][i]['sent']['sms'] )
 		else:
@@ -115,7 +126,7 @@ else:
 #	print "%s.smscs.smsc.id %s " % ( name, o['gateway']['smscs']['smsc']['id'] )
 	metric_send( name+'.smscs.smcs.id', o['gateway']['smscs']['smsc']['id'] )
 
-	if isinstance(o['gateway']['smscs']['smsc']['sent'], dict ):	
+	if isinstance(o['gateway']['smscs']['smsc']['sent'], dict ):
 #		print "%s.smscs.smsc.sent %s " % ( name, o['gateway']['smscs']['smsc']['sent']['sms'] )
 		metric_send( name+'.smscs.smcs.sent', o['gateway']['smscs']['smsc']['sent']['sms']  )
 	else:

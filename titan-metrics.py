@@ -4,8 +4,8 @@
 import urllib, json
 import re
 import os
+import subprocess
 
-from zbxsend import Metric, send_to_zabbix
 from socket import gethostname
 
 # WARNING those url must NOT be under balancer we need directly ask local service for it's metrics!
@@ -27,9 +27,22 @@ hostname = gethostname().upper()
 
 
 def metric_send( item, val, host = hostname, zbx_serv = zabbix_server_url, zbx_serv_port = zabbix_server_port ):
-#	print "This is sent to zabbix: item - %s value - %s" % (item, val)
-	send_to_zabbix( [ Metric(host, item, val) ],
-        	        zbx_serv, zbx_serv_port )
+
+	print "This is sent to zabbix: item - %s value - %s" % (item, val)
+	subprocess.call(["/usr/sbin/zabbix-sender",
+                     "-z",
+                     zbx_serv,
+                     "-p",
+                     zbx_serv_port,
+                     "-s",
+                     host,
+                     "-k",
+                     item,
+                     "-o",
+                     val
+        ])
+
+
 
 # Metrics
 #print "Metrics"
@@ -42,7 +55,7 @@ for key, val in metrics.items():
         for a, b in value.items():
             # Remove bad sybols from item names so zabbix could acept them
             item = re.sub('[ !@#$\']', '', key) + "." + re.sub('[!@#$]', '', element) + "." + re.sub('[!@#$]', '', a)
-    #        print "Item: %s ---- Value: %s type - %s" % ( item, str(metrics[key][element][a]), type(metrics[key][element][a]) ) 
+    #        print "Item: %s ---- Value: %s type - %s" % ( item, str(metrics[key][element][a]), type(metrics[key][element][a]) )
             metric_send( item, str(metrics[key][element][a]) )
 #Health
 #print
@@ -52,13 +65,13 @@ for key, val in health.items():
         continue
     for element, value in val.items():
             # Remove bad sybols from item names so zabbix could acept them
-            item = re.sub('[ !@#$\']', '', key) + "." + re.sub('[!@#$]', '', element) 
+            item = re.sub('[ !@#$\']', '', key) + "." + re.sub('[!@#$]', '', element)
      #       print "Item: %s ---- Value: %s - %s" % ( item, str(health[key][element]), type(health[key][element]) )
 	    metric_send( item, str(health[key][element]) )
 
 
 #What we can get from metrics
-#metric_send( 'gauges.oracle.aq.queue.size.AQ_SVISTA_MESSAGE_QUEUES_E', metrics['gauges']['oracle.aq.queue.size.AQ$_SVISTA_MESSAGE_QUEUES_E']['value'] ) 
+#metric_send( 'gauges.oracle.aq.queue.size.AQ_SVISTA_MESSAGE_QUEUES_E', metrics['gauges']['oracle.aq.queue.size.AQ$_SVISTA_MESSAGE_QUEUES_E']['value'] )
 #metric_send( 'gauges.oracle.aq.queue.size.SVISTA_CBS2PC_RESP', metrics['gauges']['oracle.aq.queue.size.SVISTA_CBS2PC_RESP']['value'] )
 #metric_send( 'gauges.oracle.aq.queue.size.SVISTA_OUT', metrics['gauges']['oracle.aq.queue.size.SVISTA_OUT']['value'])
 #metric_send( 'gauges.oracle.aq.queue.size.SVISTA_PC2CBS_FORPOST', metrics['gauges']['oracle.aq.queue.size.SVISTA_PC2CBS_FORPOST']['value'] )
